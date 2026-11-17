@@ -1,0 +1,40 @@
+name: Build and publish MA 5
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ma5/Dockerfile'
+      - '.github/workflows/ma5.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ghcr.io/kylezhao1026/dsc180a-ma5:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: |
+          docker build --platform linux/amd64 \
+            --label org.opencontainers.image.source="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --tag "$IMAGE" ma5
+      - name: Test required packages
+        run: |
+          docker run --rm "$IMAGE" bash -ec '
+            command -v aria2c
+            command -v nmap
+            command -v traceroute
+            python -c "import babypandas, geopandas; from importlib.metadata import version; assert version(\"babypandas\") == \"0.1.5\""
+          '
+      - name: Publish to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE"
