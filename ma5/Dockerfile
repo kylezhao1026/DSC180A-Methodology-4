@@ -8,6 +8,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 USER jovyan
-RUN python -m pip install --no-cache-dir geopandas babypandas==0.1.5
+# keep numpy compatible with the base image's pandas and pyarrow builds
+RUN python -m pip install --no-cache-dir "numpy<2" "geopandas<1.2" \
+    && python -m pip install --no-cache-dir --no-deps babypandas==0.1.5
 
 CMD ["/bin/bash"]
